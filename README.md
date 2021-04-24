@@ -10,7 +10,7 @@ https://python-binance.readthedocs.io/en/latest/
 Installation:
 Create key.json in root with keys
 
-`
+
 {
     "client": {
         "APIKEY": "********************************",
@@ -24,7 +24,7 @@ Create key.json in root with keys
     }
 
 }
-`
+
 
 Modularity not expanded upon, to operate this program in its current state user must modify code. Please email aram.devdocs@gmail.com with any questions in regard to this project.
 
