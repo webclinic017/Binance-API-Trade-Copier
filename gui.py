@@ -1,0 +1,51 @@
+# Imports
+import tkinter as tk
+import time
+import threading
+from random import randint
+
+# Script Imports
+import binanceWork as b
+
+# Root Build
+root = tk.Tk()
+root.title("Binance.US Trade Copier")
+root.geometry("500x400")
+
+# Threaded Functions
+def balanceLabel():
+    while True:
+        balance_label.config(text=f'Balance Estimate: {b.getTotalBalance()}')
+        time.sleep(5)
+
+def lastTrade():
+    while True:
+        if (b.checkForTrades()):
+            lastTrade_label.config(text=f'Last Trade:  {b.lastTrade}')
+
+        
+        time.sleep(2)
+# def socketTime():
+#     while True:
+#         print("Socket reset")
+#         b.runClientSocket()
+
+
+
+# Setup Widgets
+balance_label = tk.Label(root, text="Balance Estimate: ")
+balance_label.pack(pady=20)
+
+lastTrade_label = tk.Label(root, text="Last Trade: ")
+lastTrade_label.pack(pady=20)
+
+
+# Start Threads
+threading.Thread(target=b.runClientSocket).start()
+threading.Thread(target=balanceLabel).start()
+threading.Thread(target=lastTrade).start()
+
+
+
+root.mainloop()
+
