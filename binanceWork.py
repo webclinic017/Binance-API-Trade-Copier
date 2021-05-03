@@ -199,7 +199,7 @@ def checkForTrades():
                         print(f'John buys {str(johnPurchaseQuantity)} {currentAsset}, which is worth ${str(johnPurchasePrice)}')
 
                         # Copy Buys
-                        # johnClient.order_market_buy(symbol=currentMarket, quantity=(johnPurchaseQuantity))
+                        johnClient.order_market_buy(symbol=currentMarket, quantity=(johnPurchaseQuantity))
 
                         # transaction["executed"] = True
                         newTradeMade = True
@@ -215,7 +215,7 @@ def checkForTrades():
                     johnPurchaseQuantity = assetPercentage * johnAssetQuantity
                     if (johnPurchaseQuantity > orderQuantity):
                         johnPurchaseQuantity = orderQuantity
-                        
+
                     johnPurchasePrice = float(johnClient.get_avg_price(symbol= currentMarket)["price"])  * johnPurchaseQuantity
 
                     
@@ -227,7 +227,7 @@ def checkForTrades():
                         print("Trade made")
                         print(f'John sells {str(johnPurchaseQuantity)} {currentAsset}, which is worth ${str(johnPurchasePrice)}')
 
-                        # johnClient.order_market_sell(symbol=currentMarket, quantity=(johnPurchaseQuantity))
+                        johnClient.order_market_sell(symbol=currentMarket, quantity=(johnPurchaseQuantity))
 
 
                         # Copy Sells
