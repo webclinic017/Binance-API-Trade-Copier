@@ -28,10 +28,6 @@ client = Client(APIKEY, APISECRET)
 johnClient = Client(JOHNAPIKEY, JOHNAPISECRET)
 
 
-
-
-
-
 # Init Globals
 tradingMarkets = ["USDTUSD", "DOGEUSDT", "VTHOUSDT", "ONEUSDT", "BANDUSDT", "ETCUSDT", "EGLDUSDT", "HNTUSDT", "ATOMUSDT", "ZRXUSDT", "MANAUSD", "KNCUSDT", "QTUMUSDT", "HBARUSD", "ENJUSD", "BATUSDT", "XLMUSDT", "BNBUSDT", "ETHUSDT", "BTCUSDT"]
 initMarketTrade = []
@@ -41,6 +37,7 @@ minTrade = float(13.00)
 # Socket global
 clientSocketList = []
 newClientSocketList = []
+makeTrade = False
 
 
 # Populate initMarketTrade[]
@@ -59,6 +56,7 @@ def process_message(msg):
     global messageTimer
     global clientSocketList
     global liveSocket
+    global makeTrade
 
     if msg['e'] == "error":
         # Handle Error
@@ -66,13 +64,14 @@ def process_message(msg):
         pprint(msg)
         liveSocket = False
     else:
-        # print(f'Message Number: {messageTimer}')
-        # print("message type: {}".format(msg['e']))
-        pprint(msg)
+        print(f'Message Number: {messageTimer}')
+        print("message type: {}".format(msg['e']))
+        # pprint(msg)
 
         if (msg['e'] == "executionReport" and msg['X'] == "FILLED"):
             msg['executed'] = False
             clientSocketList.append(msg)
+            makeTrade = True
             print("Added order to list")
     messageTimer += 1
 
@@ -83,25 +82,34 @@ def runClientSocket():
     global liveSocket
     bm = BinanceSocketManager(client)
 
-    while True:
-        conn_key = bm.start_user_socket(process_message)
-        bm.start()
-        time.sleep(10)
-        bm.stop_socket(conn_key)
-        print('Socket Reset')
+    # while True:
+    conn_key = bm.start_user_socket(process_message)
+    bm.start()
+    # pprint((conn_key))
+    time.sleep(180)
+    bm.stop_socket(conn_key)
+    print('Socket Reset')
+    bm.close()
+    # reactor.stop()
 
     # Kill
     # bm.close()
     # reactor.stop()
+
+# runClientSocket()
 
 def checkForTrades():
     i = 0
     newTradeMade = False
     global lastTrade, minTrade
     global clientSocketList, newClientSocketList
+    global makeTrade
     
-
-    if (newClientSocketList != clientSocketList):
+    # print("DEBUG:")
+    # pprint(newClientSocketList)
+    # pprint(clientSocketList)
+    # if (newClientSocketList != clientSocketList):
+    if (makeTrade):
         for transaction in clientSocketList:
             if (transaction["executed"] == False):
 
@@ -177,7 +185,12 @@ def checkForTrades():
                     print("New order cost: " + str(orderCost))
 
                     johnPurchaseQuantity = traderPercentage * johnTraderQuantity
+                    if (johnPurchaseQuantity > orderQuantity):
+                        johnPurchaseQuantity = orderQuantity
+
                     johnPurchasePrice = float(johnClient.get_avg_price(symbol= currentMarket)["price"])  * johnPurchaseQuantity
+
+                    
                     
                     if (johnPurchasePrice < minTrade):
                         print("John's balance too low")
@@ -186,11 +199,13 @@ def checkForTrades():
                         print(f'John buys {str(johnPurchaseQuantity)} {currentAsset}, which is worth ${str(johnPurchasePrice)}')
 
                         # Copy Buys
-                        # johnClient.order_market_buy(symbol=currentMarket, quantity=(traderPercentage * johnAssetQuantity))
+                        # johnClient.order_market_buy(symbol=currentMarket, quantity=(johnPurchaseQuantity))
 
                         # transaction["executed"] = True
                         newTradeMade = True
-                        newClientSocketList = clientSocketList
+                        new = clientSocketList
+                        newClientSocketList = new
+                        makeTrade = False
                 else:
                     print(f'{currentAsset} was sold')
                     print("New order quantity: " + str(orderQuantity))
@@ -198,7 +213,13 @@ def checkForTrades():
 
 
                     johnPurchaseQuantity = assetPercentage * johnAssetQuantity
+                    if (johnPurchaseQuantity > orderQuantity):
+                        johnPurchaseQuantity = orderQuantity
+                        
                     johnPurchasePrice = float(johnClient.get_avg_price(symbol= currentMarket)["price"])  * johnPurchaseQuantity
+
+                    
+
                     if (johnPurchasePrice < minTrade):
                         print("John's balance too low")
 
@@ -206,12 +227,18 @@ def checkForTrades():
                         print("Trade made")
                         print(f'John sells {str(johnPurchaseQuantity)} {currentAsset}, which is worth ${str(johnPurchasePrice)}')
 
+                        # johnClient.order_market_sell(symbol=currentMarket, quantity=(johnPurchaseQuantity))
+
+
                         # Copy Sells
                         # johnClient.order_market_buy(symbol=currentMarket, quantity=(assetPercentage * johnAssetQuantity))
                         # client.order_market_sell(symbol=currentMarket, quantity=orderQuantity)
                         # transaction["executed"] = True
                         newTradeMade = True
-                        newClientSocketList = clientSocketList
+                        new = clientSocketList
+                        newClientSocketList = new
+                        makeTrade = False
+
                 
                 transaction["executed"] = True
                 i += 1
@@ -251,6 +278,50 @@ def getTotalBalance():
     return totalBalanceUSD
 
 
+def getJohnBalance():
+    wallet = johnClient.get_account()["balances"]
+    balance = {}
+    balance["total"] = 0.00
+
+    # pprint(wallet)
+
+    for entry in wallet:
+        qty = float(entry["free"]) + float(entry["locked"])
+        asset = entry["asset"]
+
+        if (asset == "USD"):
+            balance["USD"] = qty
+            balance["total"] += qty
+        if (asset == "BUSD"):
+            balance["BUSD"] = qty
+            balance["total"] += qty
+
+        if (asset == "USDT"):
+            balance["USDT"] = qty
+            balance["total"] += qty
+
+        if (asset == "USDC"):
+            balance["USDC"] = qty
+            balance["total"] += qty
+
+        if (asset == "BTC"):
+            value = float(client.get_avg_price(symbol="BTCUSD")["price"])
+            balance["BTC"] = qty * value
+            balance["total"] += qty * value
+
+    return balance
+
+
+    
+
+# print("before")    
+# pprint(johnClient.get_account()["balances"])
+# johnClient.order_limit_sell(
+#     symbol='BTCUSDT',
+#     quantity=0.0016,
+#     price='64000')
+# print("after")
+# pprint(johnClient.get_all_orders(symbol='BTCUSDT'))
 
 
 # DEBUG
@@ -260,4 +331,22 @@ def getTotalBalance():
 # while True:
 #     checkForTrades()
 #     time.sleep(2)
-    
+
+
+# global liveSocket
+# def test_message(msg):
+#     pprint(msg)
+
+# bm = BinanceSocketManager(client)
+
+
+# conn_key = bm.start_ticker_socket(test_message)
+# bm.start()
+# time.sleep(10)
+# bm.stop_socket(conn_key)
+# print('Socket Reset')
+
+# # Kill
+# bm.close()
+# reactor.stop()
+

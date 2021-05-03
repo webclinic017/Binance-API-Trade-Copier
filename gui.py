@@ -22,13 +22,19 @@ def lastTrade():
     while True:
         if (b.checkForTrades()):
             lastTrade_label.config(text=f'Last Trade:  {b.lastTrade}')
-
-        
         time.sleep(2)
-# def socketTime():
-#     while True:
-#         print("Socket reset")
-#         b.runClientSocket()
+def johnBalance():
+    while True:
+        johnBalance_label.config(text=f'johnBalance Estimate: {b.getJohnBalance()}')
+        time.sleep(5)
+
+
+
+def socketTime():
+    while True:
+        # print("Socket reset")
+        b.runClientSocket()
+        time.sleep(1)
 
 
 
@@ -39,11 +45,15 @@ balance_label.pack(pady=20)
 lastTrade_label = tk.Label(root, text="Last Trade: ")
 lastTrade_label.pack(pady=20)
 
+johnBalance_label = tk.Label(root, text="johnBalance Estimate: ")
+johnBalance_label.pack(pady=20)
+
 
 # Start Threads
-threading.Thread(target=b.runClientSocket).start()
+threading.Thread(target=socketTime).start()
 threading.Thread(target=balanceLabel).start()
 threading.Thread(target=lastTrade).start()
+threading.Thread(target=johnBalance).start()
 
 
 
