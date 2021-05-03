@@ -163,13 +163,26 @@ def checkForTrades():
                 orderQuantity = float(transaction['q'])
                 orderPrice = float(client.get_avg_price(symbol = currentMarket)["price"])
                 orderCost = orderQuantity * orderPrice
-                assetQuantity = float(client.get_asset_balance(asset=currentAsset)["free"]) + float(client.get_asset_balance(asset=currentAsset)["locked"])
+
+                assetQuantity = 0
+
+                try:
+                    freeBalance = float(client.get_asset_balance(asset=currentAsset)["free"])
+                    lockedBalance = float(client.get_asset_balance(asset=currentAsset)["locked"])
+                    assetQuantity =  freeBalance + lockedBalance 
+                except:
+                    assetQuantity = 0
+
                 traderQuantity = float(client.get_asset_balance(asset=currentTrader)["free"]) + float(client.get_asset_balance(asset=currentTrader)["locked"])
 
                 assetPercentage = orderQuantity / (assetQuantity + orderQuantity)
                 traderPercentage = orderQuantity / (traderQuantity + orderQuantity)
 
-                johnAssetQuantity = float(johnClient.get_asset_balance(asset=currentAsset)["free"])
+                try:
+                    johnAssetQuantity = float(johnClient.get_asset_balance(asset=currentAsset)["free"])
+                except:
+                    johnAssetQuantity = 0
+
                 johnTraderQuantity = float(johnClient.get_asset_balance(asset=currentTrader)["free"])
                 
 
@@ -312,7 +325,8 @@ def getJohnBalance():
     return balance
 
 
-    
+# pprint(client.get_account())
+# pprint(float(client.get_asset_balance(asset=currentAsset)["free"]))
 
 # print("before")    
 # pprint(johnClient.get_account()["balances"])
