@@ -8,6 +8,7 @@ import time
 import os
 from twisted.internet import reactor
 import json
+import math
 
 with open("key.json") as json_data_file:
     key = json.load(json_data_file)
@@ -24,8 +25,8 @@ LIMIT = 1
 
 # Connect to Binance.us
 
-client = Client(APIKEY, APISECRET)
-johnClient = Client(JOHNAPIKEY, JOHNAPISECRET)
+client = Client(APIKEY, APISECRET, {"verify": True, "timeout": 10000})
+johnClient = Client(JOHNAPIKEY, JOHNAPISECRET, {"verify": True, "timeout": 10000})
 
 
 # Init Globals
@@ -33,11 +34,14 @@ tradingMarkets = ["USDTUSD", "DOGEUSDT", "VTHOUSDT", "ONEUSDT", "BANDUSDT", "ETC
 initMarketTrade = []
 lastTrade = ""
 liveSocket = True
-minTrade = float(13.00)
+minTrade = float(15.00)
 # Socket global
 clientSocketList = []
 newClientSocketList = []
 makeTrade = False
+
+# Global Cache
+# precision = 6
 
 
 # Populate initMarketTrade[]
@@ -162,6 +166,7 @@ def checkForTrades():
                 # Init variables as Float
                 orderQuantity = float(transaction['q'])
                 orderPrice = float(client.get_avg_price(symbol = currentMarket)["price"])
+                minAssetOrder = minTrade / orderPrice 
                 orderCost = orderQuantity * orderPrice
 
                 assetQuantity = 0
@@ -189,7 +194,23 @@ def checkForTrades():
                 # Copier's wallets
                 # blankAssetWallet = float(blankClient.get_asset_balance(asset=currentTrader)["free"])
                 # blankTraderWallet = float(blankClient.get_asset_balance(asset=currentTrader)["free"])
-            
+
+                from datetime import datetime
+
+                now = datetime.now()
+
+                current_time = now.strftime("%H:%M:%S")
+                # print("Current Time =", current_time)
+
+
+                # Create precision
+                ticks = {}
+                stepSize = 0
+                for filt in client.get_symbol_info(currentMarket)['filters']:
+                    if filt['filterType'] == 'LOT_SIZE':
+                        stepSize = filt['stepSize']
+
+                precision = int(round(-math.log(float(stepSize), 10), 0))   
             
 
                 if (transaction['S'] == "BUY"):
@@ -197,22 +218,37 @@ def checkForTrades():
                     print("New order quantity: " + str(orderQuantity))
                     print("New order cost: " + str(orderCost))
 
+                    lastTrade = f'Market: {currentMarket} Qty: {orderQuantity} Cost: {orderCost}.  {current_time}'
+
                     johnPurchaseQuantity = traderPercentage * johnTraderQuantity
                     if (johnPurchaseQuantity > orderQuantity):
                         johnPurchaseQuantity = orderQuantity
+                    
+                
 
                     johnPurchasePrice = float(johnClient.get_avg_price(symbol= currentMarket)["price"])  * johnPurchaseQuantity
 
+                    if (johnPurchasePrice < minTrade):
+                        if (johnTraderQuantity >= (minTrade + 0.1)):
+                            print('min trade made')
+                            johnPurchaseQuantity = minTrade + 0.1
+                            print(f'new purchase qty {johnPurchaseQuantity}')
+                            johnPurchasePrice = johnPurchaseQuantity
+                            print(f'new purchase price {johnPurchasePrice}')
                     
                     
                     if (johnPurchasePrice < minTrade):
                         print("John's balance too low")
+                        print (f'{johnPurchasePrice} is too low to make trade')
                     else:
                         print("Trade made")
                         print(f'John buys {str(johnPurchaseQuantity)} {currentAsset}, which is worth ${str(johnPurchasePrice)}')
 
                         # Copy Buys
-                        johnClient.order_market_buy(symbol=currentMarket, quantity=(johnPurchaseQuantity))
+                        try:
+                            johnClient.order_market_buy(symbol=currentMarket, quantity=(round(johnPurchaseQuantity, precision)))
+                        except:
+                            print("Buy failed")
 
                         # transaction["executed"] = True
                         newTradeMade = True
@@ -228,19 +264,27 @@ def checkForTrades():
                     johnPurchaseQuantity = assetPercentage * johnAssetQuantity
                     if (johnPurchaseQuantity > orderQuantity):
                         johnPurchaseQuantity = orderQuantity
-
+                    
                     johnPurchasePrice = float(johnClient.get_avg_price(symbol= currentMarket)["price"])  * johnPurchaseQuantity
 
+                    if (johnPurchasePrice < minTrade):
+                        if (johnAssetQuantity >= (minAssetOrder + 0.1)):
+                            johnPurchaseQuantity = minAssetOrder + 0.1
+                            johnPurchasePrice = johnPurchaseQuantity * orderPrice
                     
-
+                    
                     if (johnPurchasePrice < minTrade):
                         print("John's balance too low")
-
+                        print (f'{johnPurchasePrice} is too low to make trade')
                     else:
                         print("Trade made")
                         print(f'John sells {str(johnPurchaseQuantity)} {currentAsset}, which is worth ${str(johnPurchasePrice)}')
 
-                        johnClient.order_market_sell(symbol=currentMarket, quantity=(johnPurchaseQuantity))
+                        
+                        try:
+                            johnClient.order_market_sell(symbol=currentMarket, quantity=(round(johnPurchaseQuantity, precision)))
+                        except:
+                            print('Sell Failed')
 
 
                         # Copy Sells
