@@ -6,6 +6,8 @@ from random import randint
 
 # Script Imports
 import binanceWork as b
+import discordManager
+
 
 # Root Build
 root = tk.Tk()
@@ -27,6 +29,12 @@ def johnBalance():
     while True:
         johnBalance_label.config(text=f'johnBalance Estimate: {b.getJohnBalance()}')
         time.sleep(5)
+# def discord():
+    # import discordManager
+    # while True:
+    #     print('tes')
+    #     time.sleep(5)
+
 
 
 
@@ -54,6 +62,7 @@ threading.Thread(target=socketTime).start()
 threading.Thread(target=balanceLabel).start()
 threading.Thread(target=lastTrade).start()
 threading.Thread(target=johnBalance).start()
+threading.Thread(target=discordManager.start).start()
 
 
 

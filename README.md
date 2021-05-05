@@ -32,6 +32,8 @@ TODO:
 Logging system within the GUI.
 Integrate profiles for multiple copiers to be added.
 
+Fix minimum purchase price issue. Need to set purchase quantity to match min trade value for each buy and sell 
+
 
 
 

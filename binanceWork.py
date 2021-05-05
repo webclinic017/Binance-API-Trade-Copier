@@ -20,8 +20,13 @@ APISECRET = key["aram"]["APISECRET"]
 JOHNAPIKEY = key["john"]["APIKEY"]
 JOHNAPISECRET = key["john"]["APISECRET"]
 
+TRADECHANNEL = key["discord"]["TRADES_CHANNEL"]
+JGTRADE_CHANNEL = key["discord"]["JGTRADE_CHANNEL"]
+
 LIMIT = 1
 
+DISCORD_MESSAGE_BOARD = []
+OLD_MESSAGE_BOARD = []
 
 # Connect to Binance.us
 
@@ -77,7 +82,21 @@ def process_message(msg):
             clientSocketList.append(msg)
             makeTrade = True
             print("Added order to list")
-    messageTimer += 1
+            messageTimer += 1
+    
+
+
+def passToDiscord(msg, chnl):
+  
+    print("Info passed to discord")
+    appy = {
+        "message": msg,
+        "executed": False,
+        "channel": chnl
+    }
+    DISCORD_MESSAGE_BOARD.append(appy)
+    
+
 
 
 
@@ -86,13 +105,18 @@ def runClientSocket():
     global liveSocket
     bm = BinanceSocketManager(client)
 
+    from datetime import datetime
+
+    now = datetime.now()
+
+    current_time = now.strftime("%H:%M:%S")
     # while True:
     conn_key = bm.start_user_socket(process_message)
     bm.start()
     # pprint((conn_key))
     time.sleep(180)
     bm.stop_socket(conn_key)
-    print('Socket Reset')
+    print(f'Socket Reset: {current_time}')
     bm.close()
     # reactor.stop()
 
@@ -121,31 +145,38 @@ def checkForTrades():
                 currentTrader = ''
 
                 currentMarket = transaction['s']
-                # How will I parse the market name?
-                if (currentMarket[-1] == 'T'):
-                    # print(currentMarket.rstrip('USDT')[0])
-                    currentAsset = currentMarket.rstrip('USDT')
-                    currentTrader = "USDT"
-                    i += 1
-                elif (currentMarket[-1] == 'C' and currentMarket[-3] == 'S'  ):
-                    currentAsset = currentMarket.rstrip('USDC')
-                    currentTrader = "USDC"
-                    i += 1
-                elif (currentMarket[-1] == 'C' and currentMarket[-3] == 'B'  ):
-                    currentAsset = currentMarket.rstrip('BTC')
-                    currentTrader = "BTC"
-                    i += 1
-                elif (currentMarket[-1] == 'D' and currentMarket[-4] == 'B'  ):
-                    currentAsset = currentMarket.rstrip('BUSD')
-                    currentTrader = "BUSD"
-                    i += 1
-                else:
-                    # print("DEBUG")
-                    # print(currentMarket.rstrip('USD'))
-                    currentAsset = currentMarket.rstrip('USD')
-                    currentTrader = "USD"
-                    i += 1 
                 
+                # Manual fixes
+                if (currentMarket == 'BANDUSDT'):
+                    currentAsset = 'BAND'
+                    currentTrader = 'USDT'
+                else:
+
+                    # How will I parse the market name?
+                    if (currentMarket[-1] == 'T'):
+                        # print(currentMarket.rstrip('USDT')[0])
+                        currentAsset = currentMarket.rstrip('USDT')
+                        currentTrader = "USDT"
+                        i += 1
+                    elif (currentMarket[-1] == 'C' and currentMarket[-3] == 'S'  ):
+                        currentAsset = currentMarket.rstrip('USDC')
+                        currentTrader = "USDC"
+                        i += 1
+                    elif (currentMarket[-1] == 'C' and currentMarket[-3] == 'B'  ):
+                        currentAsset = currentMarket.rstrip('BTC')
+                        currentTrader = "BTC"
+                        i += 1
+                    elif (currentMarket[-1] == 'D' and currentMarket[-4] == 'B'  ):
+                        currentAsset = currentMarket.rstrip('BUSD')
+                        currentTrader = "BUSD"
+                        i += 1
+                    else:
+                        # print("DEBUG")
+                        # print(currentMarket.rstrip('USD'))
+                        currentAsset = currentMarket.rstrip('USD')
+                        currentTrader = "USD"
+                        i += 1 
+                    
                 # newTrade = client.get_my_trades(symbol=currentMarket, limit=LIMIT)[0]
 
                 
@@ -210,16 +241,23 @@ def checkForTrades():
                     if filt['filterType'] == 'LOT_SIZE':
                         stepSize = filt['stepSize']
 
-                precision = int(round(-math.log(float(stepSize), 10), 0))   
-            
+                precision = int(round(-math.log(float(stepSize), 10), 0))  
 
+                buy_or_sell = str(transaction['S'])
+                
+                # Gui
+                # Add balance to last trade when getBalance is optimized 
+                lastTrade = f'{buy_or_sell} -- Market: {currentMarket} Qty: {orderQuantity} Cost: {round(orderCost, 2)} Time: {current_time}'
+                passToDiscord(lastTrade, TRADECHANNEL) 
+                messFail = "Trade failed, contact admin for details"
+            
+                # Buy
                 if (transaction['S'] == "BUY"):
                     print(f'{currentAsset} was bought')
                     print("New order quantity: " + str(orderQuantity))
                     print("New order cost: " + str(orderCost))
 
-                    lastTrade = f'Market: {currentMarket} Qty: {orderQuantity} Cost: {orderCost}.  {current_time}'
-
+                    
                     johnPurchaseQuantity = traderPercentage * johnTraderQuantity
                     if (johnPurchaseQuantity > orderQuantity):
                         johnPurchaseQuantity = orderQuantity
@@ -239,22 +277,29 @@ def checkForTrades():
                     
                     if (johnPurchasePrice < minTrade):
                         print("John's balance too low")
-                        print (f'{johnPurchasePrice} is too low to make trade')
+                        messLow = f'{johnPurchasePrice} is too low to make trade'
+                        print(messLow)
+                        passToDiscord(messLow, JGTRADE_CHANNEL)
                     else:
                         print("Trade made")
-                        print(f'John buys {str(johnPurchaseQuantity)} {currentAsset}, which is worth ${str(johnPurchasePrice)}')
+                        messBuy = f'John buys {str(johnPurchaseQuantity)} {currentAsset}, which is worth ${str(round(johnPurchasePrice, 2))}'
+                        print(messBuy)
+                        passToDiscord(messBuy, JGTRADE_CHANNEL)
 
                         # Copy Buys
                         try:
                             johnClient.order_market_buy(symbol=currentMarket, quantity=(round(johnPurchaseQuantity, precision)))
                         except:
                             print("Buy failed")
+                            passToDiscord(messFail, JGTRADE_CHANNEL)
+
 
                         # transaction["executed"] = True
                         newTradeMade = True
                         new = clientSocketList
                         newClientSocketList = new
                         makeTrade = False
+                # Sell
                 else:
                     print(f'{currentAsset} was sold')
                     print("New order quantity: " + str(orderQuantity))
@@ -275,16 +320,23 @@ def checkForTrades():
                     
                     if (johnPurchasePrice < minTrade):
                         print("John's balance too low")
-                        print (f'{johnPurchasePrice} is too low to make trade')
+                        messLow = f'{johnPurchasePrice} is too low to make trade'
+                        print(messLow)
+                        passToDiscord(messLow, JGTRADE_CHANNEL)
+
                     else:
                         print("Trade made")
-                        print(f'John sells {str(johnPurchaseQuantity)} {currentAsset}, which is worth ${str(johnPurchasePrice)}')
+                        messSell = f'John sells {str(johnPurchaseQuantity)} {currentAsset}, which is worth ${str(round(johnPurchasePrice, 2))}'
+                        print(messSell)
+                        passToDiscord(messSell, JGTRADE_CHANNEL)
 
                         
                         try:
                             johnClient.order_market_sell(symbol=currentMarket, quantity=(round(johnPurchaseQuantity, precision)))
                         except:
                             print('Sell Failed')
+                            passToDiscord(messFail, JGTRADE_CHANNEL)
+
 
 
                         # Copy Sells
@@ -308,7 +360,14 @@ def checkForTrades():
 
     
 
+def balanceWebSocket(wlt):
+    balance = 0.00
 
+
+
+    return balance
+
+    
 def getTotalBalance():
     wallet = client.get_account()["balances"]
     totalBalanceUSD = 0.00

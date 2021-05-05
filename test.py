@@ -1,47 +1,44 @@
-# Init values
-from binance.client import Client
-from binance.websockets import BinanceSocketManager
-import binance.client as bc
-from pprint import pprint
-import tkinter
-import time
-import os
+import binanceWork as b
 from twisted.internet import reactor
-import json
-import math
+import pprint
+import time
 
-with open("key.json") as json_data_file:
-    key = json.load(json_data_file)
+def process_message(msg):
+    # print("message type: {}".format(msg['e']))
+    print(msg)
+    # do something
+
+# def test():
+    
+#     bm = b.BinanceSocketManager(b.client)
+
+#     from datetime import datetime
+
+#     now = datetime.now()
+
+#     current_time = now.strftime("%H:%M:%S")
+#     # while True:
+#     conn_key = bm.start_symbol_ticker_socket('BNBBTC', process_message)
+#     bm.start()
+#     # pprint((conn_key))
+#     time.sleep(10)
 
 
-APIKEY = key["aram"]["APIKEY"]
-APISECRET = key["aram"]["APISECRET"]
-
-JOHNAPIKEY = key["john"]["APIKEY"]
-JOHNAPISECRET = key["john"]["APISECRET"]
-
-LIMIT = 1
+#     bm.stop_socket(conn_key)
+#     print(f'Socket Reset: {current_time}')
+#     bm.close()
+#     reactor.stop()
 
 
-# Connect to Binance.us
 
-client = Client(APIKEY, APISECRET)
-johnClient = Client(JOHNAPIKEY, JOHNAPISECRET)
 
-johnClient.order_market_buy(symbol="BANDUSDT", quantity=2.43)
+# start = time.time()
+# print(b.getTotalBalance())
+# end = time.time()
+# print(end - start)
 
-pprint(johnClient.get_account()["balances"])
-# pprint(client.get_symbol_info("USDTUSD"))["filters"]
 
-# ticks = {}
-# stepSize = 0
-# for filt in client.get_symbol_info('ETHUSDT')['filters']:
-#                 if filt['filterType'] == 'LOT_SIZE':
-#                     stepSize = filt['stepSize']
+print(b.johnClient.get_account()["balances"])
+   
 
-# precision = int(round(-math.log(float(stepSize), 10), 0))
-
-# print(ticks)
-# print(stepSize)
-
-# print(precision)
+#    On init, Create new balance price sheet with the ticker. Use ticker websocket to quickly parse and find balance. 
