@@ -262,9 +262,12 @@ def checkForTrades():
                     if (johnPurchaseQuantity > orderQuantity):
                         johnPurchaseQuantity = orderQuantity
                     
+                    if (johnTraderQuantity > orderQuantity):
+                        johnPurchaseQuantity = orderQuantity
                 
 
                     johnPurchasePrice = float(johnClient.get_avg_price(symbol= currentMarket)["price"])  * johnPurchaseQuantity
+                    
 
                     if (johnPurchasePrice < minTrade):
                         if (johnTraderQuantity >= (minTrade + 0.1)):
@@ -308,6 +311,9 @@ def checkForTrades():
 
                     johnPurchaseQuantity = assetPercentage * johnAssetQuantity
                     if (johnPurchaseQuantity > orderQuantity):
+                        johnPurchaseQuantity = orderQuantity
+
+                    if (johnAssetQuantity > orderQuantity):
                         johnPurchaseQuantity = orderQuantity
                     
                     johnPurchasePrice = float(johnClient.get_avg_price(symbol= currentMarket)["price"])  * johnPurchaseQuantity

@@ -41,7 +41,7 @@ async def on_ready():
                 if (i["executed"] == False):
                     await client.get_channel(i["channel"]).send(i["message"])
                     i["executed"] = True
-            b.OLD_MESSAGE_BOARD = b.DISCORD_MESSAGE_BOARD
+            b.DISCORD_MESSAGE_BOARD = []
             print('ding')
 
         

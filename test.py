@@ -1,6 +1,6 @@
 import binanceWork as b
 from twisted.internet import reactor
-import pprint
+from pprint import pprint
 import time
 
 def process_message(msg):
@@ -37,8 +37,35 @@ def process_message(msg):
 # end = time.time()
 # print(end - start)
 
+# balance = b.johnClient.get_account()["balances"]
+# pprint(balance)
 
-print(b.johnClient.get_account()["balances"])
+def getTotalBalance():
+    wallet = b.johnClient.get_account()["balances"]
+    totalBalanceUSD = 0.00
+
+    # print(wallet[0]["asset"])
+    for entry in wallet:
+        
+        asset = entry["asset"]
+        qty = float(entry["free"]) + float(entry["locked"])
+        value = 0
+        if (asset == "USD"):
+            totalBalanceUSD += qty
+            continue
+        try:
+            value = float(b.johnClient.get_avg_price(symbol=f"{asset}USDT")["price"])
+        except:
+            value = float(b.johnClient.get_avg_price(symbol=f"{asset}USD")["price"])
+            
+        print(f'Asset: {asset} Qty: {qty}  Value: {qty * value}')
+
+        totalBalanceUSD += qty * value
+        
+        # print(f"{asset} Value: $" + str(qty * value))
+    
+    # print("Est. Total Balance: $" + str(totalBalanceUSD))
+    return totalBalanceUSD
    
-
+print(getTotalBalance())
 #    On init, Create new balance price sheet with the ticker. Use ticker websocket to quickly parse and find balance. 
